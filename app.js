@@ -1,58 +1,84 @@
-// Register Service Worker
+import { saveCircle, getCircles } from './idb.js';
+
+// register service worker
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js')
-    .then(() => console.log('✅ Service Worker registered'));
+  navigator.serviceWorker.register('sw.js');
 }
 
-// PWA Install Prompt
-let deferredPrompt;
-const installBtn = document.getElementById('installBtn');
-installBtn.style.display = 'none';
+// notification permission
+Notification.requestPermission();
 
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  installBtn.style.display = 'block';
-});
+// setup map
+const map = L.map('map').setView([0, 0], 2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-installBtn.addEventListener('click', async () => {
-  installBtn.style.display = 'none';
-  deferredPrompt.prompt();
-  await deferredPrompt.userChoice;
-  deferredPrompt = null;
-});
+// drawing
+const drawnItems = new L.FeatureGroup().addTo(map);
+new L.Control.Draw({
+  draw: {
+    circle: true,
+    polyline: false,
+    polygon: false,
+    rectangle: false,
+    marker: false
+  },
+  edit: { featureGroup: drawnItems }
+}).addTo(map);
 
-// Camera Access
-document.getElementById('cameraBtn').addEventListener('click', async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    document.getElementById('cameraView').srcObject = stream;
-  } catch (err) {
-    alert('Camera access denied or unavailable.');
-  }
-});
+map.on(L.Draw.Event.CREATED, async (event) => {
+  const layer = event.layer;
+  drawnItems.addLayer(layer);
 
-// Notifications
-document.getElementById('notifyBtn').addEventListener('click', async () => {
-  if (!('Notification' in window)) {
-    alert('This browser does not support notifications.');
-    return;
-  }
-
-  let permission = Notification.permission;
-  if (permission === 'default') {
-    permission = await Notification.requestPermission();
-  }
-
-  if (permission === 'granted') {
-    navigator.serviceWorker.getRegistration().then(reg => {
-      reg.showNotification('Hello from your PWA!', {
-        body: 'This is a test notification.',
-        icon: 'https://cdn-icons-png.flaticon.com/512/1828/1828884.png'
-      });
+  if (layer instanceof L.Circle) {
+    await saveCircle({
+      lat: layer.getLatLng().lat,
+      lng: layer.getLatLng().lng,
+      radius: layer.getRadius()
     });
-  } else {
-    alert('Notifications not allowed.');
   }
 });
 
+// load saved
+(async () => {
+  const circles = await getCircles();
+  circles.forEach(c => {
+    L.circle([c.lat, c.lng], { radius: c.radius }).addTo(drawnItems);
+  });
+})();
+
+// export
+document.getElementById("export").onclick = async () => {
+  const data = await getCircles();
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = "circles.json"; a.click();
+};
+
+// import
+document.getElementById("import").onclick = async () => {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+  input.onchange = async () => {
+    const file = input.files[0];
+    const text = await file.text();
+    const imported = JSON.parse(text);
+
+    imported.forEach(async (c) => {
+      await saveCircle(c);
+      L.circle([c.lat, c.lng], { radius: c.radius }).addTo(drawnItems);
+    });
+  };
+  input.click();
+};
+
+// fallback timer notification
+setInterval(() => {
+  if (Notification.permission === "granted") {
+    new Notification("⏰ Reminder", {
+      body: "Five minutes passed!",
+      icon: "icons/icon-192.png"
+    });
+  }
+}, 300000);

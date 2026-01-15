@@ -1,20 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PWA Demo</title>
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#317EFB" />
-  <script defer src="app.js"></script>
+  <title>Map PWA</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet/dist/leaflet.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"
+  />
 </head>
 <body>
-  <h1>PWA Demo App</h1>
-  <button id="installBtn">Install App</button>
-  <button id="cameraBtn">Open Camera</button>
-  <button id="notifyBtn">Send Notification</button>
-
-  <video id="cameraView" autoplay playsinline width="320"></video>
+  <button id="export">Export Data</button>
+  <button id="import">Import Data</button>
+  <div id="map" style="height:70vh"></div>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
-
