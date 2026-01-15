@@ -1,3 +1,5 @@
+import { openDB } from "https://unpkg.com/idb?module";
+
 const dbPromise = idb.openDB('map-pwa-db', 1, {
   upgrade(db) {
     db.createObjectStore('circles', { keyPath: 'id', autoIncrement: true });
